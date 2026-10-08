@@ -1,4 +1,4 @@
-Open omp's model roles matrix inside bb, pick a model per role, and keep every
+Open omp's model roles inside bb, pick a model per role, and keep every
 assignment that was already there.
 
 ## What you get

@@ -4,9 +4,8 @@
 // @get-bb/plugin-sdk/app are provided by the BB app at load time (never bundled),
 // so this file must be loaded by BB, not imported directly.
 //
-// The page is omp's `/models` roles view: every role down the side, every
-// provider across the top, and a click assigns that provider's model to the
-// role. All state comes from the server's `overview` RPC — which reads the live
+// The page is omp's `/models` roles view: one row per role showing the model
+// it points at, with a chooser that searches every provider. All state comes from the server's `overview` RPC — which reads the live
 // catalog and the stored assignments through the plugin's host entry, i.e. the
 // real `omp` binary on this machine.
 import { useCallback, useEffect, useState } from "react";
@@ -14,8 +13,9 @@ import type { ReactNode } from "react";
 import { definePluginApp, useRpc } from "@get-bb/plugin-sdk/app";
 import { toast } from "sonner";
 import { rpcContract, type RolePickerRow, type CatalogModel } from "./contract";
-import { MatrixHeader, ReloadHint, RoleMatrix } from "@/components/omp-models-role-matrix";
+import { RoleList } from "@/components/omp-models-role-list";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 
 /** The dashed box BB's own list pages use for loading and empty states. */
 function EmptyState({ children }: { children: ReactNode }) {
@@ -108,42 +108,74 @@ function useRoles() {
   return { overview, error, loading, assigning, unsetting, refresh, assign, unset };
 }
 
+function LoadingRows() {
+  return (
+    <ul className="divide-y divide-border rounded-lg border border-border" aria-label="Reading the omp catalog">
+      {Array.from({ length: 6 }, (_, index) => (
+        <li key={index} className="flex items-center gap-4 px-4 py-4">
+          <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+          <div className="h-3 flex-1 animate-pulse rounded bg-muted" />
+          <div className="h-7 w-16 animate-pulse rounded bg-muted" />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function PageHeader({
+  overview,
+  loading,
+  onReload,
+}: {
+  overview: Overview | null;
+  loading: boolean;
+  onReload: () => void;
+}) {
+  return (
+    <header className="flex items-start justify-between gap-3">
+      {/* `min-w-0` lets the config path truncate instead of pushing the button off-screen. */}
+      <div className="min-w-0 space-y-1">
+        <p className="text-sm text-muted-foreground">
+          Pick the model omp uses for each job. Changes are validated against the live catalog;
+          running omp sessions pick them up on restart.
+        </p>
+        {overview !== null ? (
+          <p className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+            <span>
+              omp <span className="font-mono text-foreground">{overview.version}</span>
+            </span>
+            <span>
+              <span className="text-foreground">{overview.models.length}</span> models
+            </span>
+            <span className="min-w-0 truncate font-mono" title={overview.configPath}>
+              {overview.configPath}
+            </span>
+          </p>
+        ) : null}
+      </div>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        className="shrink-0"
+        disabled={loading}
+        onClick={onReload}
+        aria-label="Reload the catalog and roles from omp"
+      >
+        <Icon name="RefreshCw" className={loading ? "size-3.5 animate-spin" : "size-3.5"} />
+        Reload
+      </Button>
+    </header>
+  );
+}
+
 function RolesPage() {
   const { overview, error, loading, assigning, unsetting, refresh, assign, unset } = useRoles();
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-6xl space-y-4 p-4 md:p-5">
-        {/* `min-w-0` on the text column is what lets the config path truncate
-            instead of pushing the reload button off a narrow screen. */}
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 flex-1 space-y-1">
-            <p className="text-sm text-muted-foreground">
-              omp keeps one <code className="font-mono">modelRoles</code> record in its config
-              file. This page reads the live catalog and rewrites that record, the same thing
-              omp&apos;s <code className="font-mono">/models</code> roles view does.
-            </p>
-            {overview !== null ? (
-              <MatrixHeader
-                version={overview.version}
-                configPath={overview.configPath}
-                modelCount={overview.models.length}
-              />
-            ) : null}
-          </div>
-          <div className="shrink-0 self-start">
-            <ReloadHint onReload={() => void refresh()} loading={loading} />
-          </div>
-        </header>
-
-        {overview !== null ? (
-          <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-            omp replaces the whole <code className="font-mono">modelRoles</code> record on
-            every write and validates nothing, so every selector here is checked against the
-            live catalog first and the other assignments are carried forward. A running omp
-            session keeps the model it started with.
-          </p>
-        ) : null}
+      <div className="mx-auto w-full max-w-4xl space-y-5 p-4 md:p-6">
+        <PageHeader overview={overview} loading={loading} onReload={() => void refresh()} />
 
         {error !== null ? (
           <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm">
@@ -155,16 +187,14 @@ function RolesPage() {
           </div>
         ) : null}
 
-        {loading && overview === null ? (
-          <EmptyState>Reading the omp catalog…</EmptyState>
-        ) : null}
+        {loading && overview === null ? <LoadingRows /> : null}
 
         {overview !== null && overview.rows.length === 0 ? (
           <EmptyState>omp reports no model roles.</EmptyState>
         ) : null}
 
         {overview !== null && overview.rows.length > 0 ? (
-          <RoleMatrix
+          <RoleList
             rows={overview.rows}
             models={overview.models}
             assigning={assigning}

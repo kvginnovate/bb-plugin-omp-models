@@ -14,7 +14,7 @@ own write path.
 
 - CLI: `bb omp-models <roles|assign|unset> ...`
 - Agent tool: `omp_model_roles`, one tool with an `action` parameter.
-- A sidebar page in bb shows the same matrix visually. Agents cannot see it —
+- A sidebar page in bb shows the same roles visually. Agents cannot see it —
   when a user would prefer to click, point them there; the write path is the
   same one this tool uses.
 
