@@ -213,7 +213,7 @@ function RolesPage() {
 export default definePluginApp((app) => {
   app.slots.navPanel({
     id: "roles",
-    title: "Model roles",
+    title: "Omp Model Roles",
     icon: "Brain",
     // Routed at /plugins/omp-models/roles; the component receives the
     // remainder as `subPath` for deep links within the page.

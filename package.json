@@ -7,8 +7,8 @@
     "bbPluginSdk": ">=0.6.15"
   },
   "bb": {
-    "name": "Omp Models",
-    "description": "Open omp's model roles matrix in bb: pick a model per role, see every provider, keep every assignment.",
+    "name": "Omp Model Roles",
+    "description": "Open omp's model roles in bb: pick a model per role, see every provider, keep every assignment.",
     "branding": {
       "icon": "Brain"
     },
